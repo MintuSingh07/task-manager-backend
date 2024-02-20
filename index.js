@@ -2,15 +2,22 @@ const express = require('express');
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+
+const { v4: uuidv4 } = require('uuid');
+
 const User = require("./user.model");
 const Task = require('./task.model');
+
+const {sendMail} = require("./generateEmail.js");
+
+const Otp = require("./otp.model");
 
 const app = express();
 const PORT = 8000;
 app.use(express.json());
 
 
-mongoose.connect("mongodb://localhost:27017/task_manage")
+mongoose.connect("mongodb+srv://codingarbind:mynameisarbind@arbind.7wex6sm.mongodb.net/task_manage")
     .then(() => console.log("DB connected"))
     .catch((err) => console.log(`Error is: ${err}`));
 
@@ -67,7 +74,8 @@ app.post("/register", async (req, res) => {
             if (!isUser) {
                 const newUser = new User({
                     email,
-                    password: hashedPassword
+                    password: hashedPassword,
+                    uuid: uuidv4()
                 });
                 await newUser.save();
                 return res.status(200).json({ message: "User register sucessfully" });
@@ -165,6 +173,54 @@ app.delete("/deletetask", async (req, res) => {
     }
 });
 
+app.post("/sendotp", async (req, res) => {
+    const {uuid}  = req.body;
+
+    if(!uuid)return res.status(404).json({
+        error: "not found!"
+    });
+    const user = await User.findOne({uuid});
+    const otp = Math.floor(Math.random()*444444);
+
+    await sendMail(user.email, otp);
+    const data = new Otp({
+        uuid,otp
+    });
+
+
+    await data.save();
+    
+    return res.status(200).json({
+        message: "success",
+        code: "200"
+    })
+});
+
+app.post("/verifyotp", async (req, res) => {
+    const {uuid, otp} = req.body;
+    
+    const otps = await Otp.findOne({
+        uuid
+    });
+    if(!otps) return res.status(400).json({
+        error: "server error"
+    });
+    if(otps.otp !== otp){
+        return res.status(401).json({
+            message: "unauthorized, sorry"  
+        })
+    };
+
+    await Otp.deleteOne({
+        uuid
+    });
+    return res.status(200).json({
+        message: "you are logged in, thank you!"
+    });
+})
+
+
 app.listen(PORT, () => {
     console.log(`Server is running on ${PORT}`);
-})
+});
+
