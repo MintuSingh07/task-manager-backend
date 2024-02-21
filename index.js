@@ -17,7 +17,7 @@ const PORT = 8000;
 app.use(express.json());
 
 
-mongoose.connect("mongodb+srv://codingarbind:mynameisarbind@arbind.7wex6sm.mongodb.net/task_manage")
+mongoose.connect("mongodb://localhost:27017/task_manage")
     .then(() => console.log("DB connected"))
     .catch((err) => console.log(`Error is: ${err}`));
 
